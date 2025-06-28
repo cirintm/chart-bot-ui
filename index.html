@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CryptoChart Goodyyy</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #111;
+      color: #eee;
+      padding: 20px;
+    }
+    h1 {
+      color: #0ff;
+    }
+    .section {
+      margin-bottom: 30px;
+    }
+    button {
+      background-color: #0ff;
+      color: #000;
+      padding: 10px 20px;
+      font-size: 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+    button:hover {
+      background-color: #00cccc;
+    }
+    #output {
+      background: #222;
+      padding: 15px;
+      border-radius: 8px;
+      white-space: pre-wrap;
+      margin-top: 20px;
+    }
+    input[type="file"] {
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+
+<h1>📊 CryptoChart Goodyyy Bot</h1>
+
+<div class="section">
+  <button onclick="showMovers()">📈 3% Movers</button>
+  <button onclick="showUploadPrompt()">📤 Analyze Chart</button>
+  <input type="file" id="chartInput" style="display:none" accept="image/*" onchange="handleChartUpload(event)" />
+</div>
+
+<div id="output"></div>
+
+<script>
+function showMovers() {
+  const movers = [
+    ["BTC/USDT", +3.5], ["ETH/USDT", +3.2], ["SUI/USDT", -3.1],
+    ["AVAX/USDT", +3.4], ["FET/USDT", -3.3], ["SOL/USDT", +3.8],
+    ["LINK/USDT", +3.1], ["BLZ/USDT", -3.2], ["DOGE/USDT", -3.4],
+    ["XRP/USDT", +3.0]
+  ];
+  let html = "📊 Top tokens with ±3% move:\n";
+  movers.forEach(([name, change]) => {
+    html += `- ${name} (${change > 0 ? '+' : ''}${change.toFixed(1)}%)\n`;
+  });
+  document.getElementById("output").textContent = html;
+}
+
+function showUploadPrompt() {
+  document.getElementById("chartInput").click();
+}
+
+function handleChartUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  // Simulate analysis
+  const dummyReport = `📊 Crypto Chart Analysis Report
+
+🪙 Token: SUI
+🕒 Timeframe: 4H
+💰 Current Price: 0.675
+📉 Change: -3.2%
+
+⚙️ Analysis:
+- Bearish momentum detected
+
+🛡️ Signal: 🔴 SHORT
+🎯 Entry: 0.675
+📉 Stop-Loss: 0.6953
+📈 Take-Profit: 0.655
+
+🔹 Monitor price action and key zones before entering trades.`;
+
+  setTimeout(() => {
+    document.getElementById("output").textContent = dummyReport;
+  }, 1000); // simulate processing delay
+}
+</script>
+
+</body>
+</html>
