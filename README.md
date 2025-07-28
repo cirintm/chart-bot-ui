@@ -1,1 +1,3 @@
-pull
+# 69-1
+Add your privatekey, wallet address and referral in "index.js" file
+use "npm install" then "node index"
