@@ -1,16 +1,38 @@
 const axios = require('axios');
 const { ethers } = require('ethers');
+const fs = require('fs');
+const path = require('path');
 
-// Configuration
+// Function to read lines from a .txt file
+function readLines(filePath) {
+  const data = fs.readFileSync(filePath, 'utf8').split('\n');
+  return data.map(line => line.trim()).filter(line => line !== ''); // Clean up and remove empty lines
+}
+
+// Load wallets and private keys from text files
+const wallets = readLines(path.join(__dirname, 'wallet.txt'));
+const privateKeys = readLines(path.join(__dirname, 'privatekey.txt'));
+
+// Ensure the number of wallets matches the number of private keys
+if (wallets.length !== privateKeys.length) {
+  console.error('Number of wallets and private keys do not match!');
+  process.exit(1);
+}
+
+// Mapping wallet addresses to their corresponding private keys
+const walletDetails = wallets.map((wallet, index) => ({
+  address: wallet,
+  privateKey: privateKeys[index]
+}));
+
+// Configuration common to all wallets
 const config = {
-  privateKey: '0xef26ef771d0d0d18604f440349e0c72d5457b8870573de9739bdda96bd41cb6a', // ADD Your Ethereum private key
-  address: '0x25E7208cbb99F7FEC6dAA6165E08f2beb3857601', // ADD Your Ethereum address
   campaignId: '30ea55e5-cf99-4f21-a577-5c304b0c61e2',
-  referralCode: 'zYOSb638vGZC', // ADD your referral code
+  referralCode: 'HM4fm4qfzlrB',
   privyAppId: 'clphlvsh3034xjw0fvs59mrdc'
 };
 
-
+// Common headers for API requests
 const getBaseHeaders = (additionalHeaders = {}) => ({
   'accept': '*/*',
   'accept-language': 'en-US,en;q=0.9',
@@ -22,12 +44,21 @@ const getBaseHeaders = (additionalHeaders = {}) => ({
   ...additionalHeaders
 });
 
-async function authenticate() {
+// Function to add delay between API calls
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Function to authenticate a single wallet
+async function authenticate(wallet, privateKey) {
   try {
-    
+    const configWithWallet = {
+      privateKey,
+      address: wallet
+    };
+
+    // Get nonce
     const { data: { nonce } } = await axios.post(
       'https://auth.privy.io/api/v1/siwe/init',
-      { address: config.address },
+      { address: configWithWallet.address },
       {
         headers: getBaseHeaders({
           'privy-ca-id': '14435a4b-d7fe-4f46-ac46-41d5e7f0d10b',
@@ -36,14 +67,14 @@ async function authenticate() {
       }
     );
     
-    console.log('Nonce received:', nonce);
+    console.log(`Nonce received for wallet ${wallet}:`, nonce);
 
-    
-    const wallet = new ethers.Wallet(config.privateKey);
-    const message = `ofc.onefootball.com wants you to sign in with your Ethereum account:\n${config.address}\n\nBy signing, you are proving you own this wallet and logging in. This does not initiate a transaction or cost any fees.\n\nURI: https://ofc.onefootball.com\nVersion: 1\nChain ID: 1\nNonce: ${nonce}\nIssued At: ${new Date().toISOString()}\nResources:\n- https://privy.io`;
-    const signature = await wallet.signMessage(message);
+    // Sign message
+    const walletInstance = new ethers.Wallet(configWithWallet.privateKey);
+    const message = `ofc.onefootball.com wants you to sign in with your Ethereum account:\n${configWithWallet.address}\n\nBy signing, you are proving you own this wallet and logging in. This does not initiate a transaction or cost any fees.\n\nURI: https://ofc.onefootball.com\nVersion: 1\nChain ID: 1\nNonce: ${nonce}\nIssued At: ${new Date().toISOString()}\nResources:\n- https://privy.io`;
+    const signature = await walletInstance.signMessage(message);
 
-    
+    // Authenticate
     const { data: authData } = await axios.post(
       'https://auth.privy.io/api/v1/siwe/authenticate',
       {
@@ -62,9 +93,9 @@ async function authenticate() {
     );
 
     const { token: authToken, identity_token: privyIdToken } = authData;
-    console.log('Auth tokens received');
+    console.log(`Auth tokens received for wallet ${wallet}`);
 
-    
+    // Accept terms
     await axios.post(
       'https://auth.privy.io/api/v1/users/me/accept_terms',
       {},
@@ -77,7 +108,7 @@ async function authenticate() {
       }
     );
 
-    
+    // Get deform token
     const { data: { data: { userLogin: deToken } } } = await axios.post(
       'https://api.deform.cc/',
       {
@@ -92,9 +123,9 @@ async function authenticate() {
       }
     );
     
-    console.log('Deform token received');
+    console.log(`Deform token received for wallet ${wallet}`);
 
-    
+    // Verify activities
     const verifyActivityHeaders = getBaseHeaders({
       'authorization': `Bearer ${deToken}`,
       'privy-id-token': privyIdToken,
@@ -102,7 +133,7 @@ async function authenticate() {
     });
 
     await Promise.all([
-      
+      // Verify first activity
       axios.post('https://api.deform.cc/', {
         operationName: 'VerifyActivity',
         variables: {
@@ -114,7 +145,7 @@ async function authenticate() {
         query: 'mutation VerifyActivity($data: VerifyActivityInput!) { verifyActivity(data: $data) { record { id status } } }'
       }, { headers: verifyActivityHeaders }),
 
-      
+      // Verify second activity
       axios.post('https://api.deform.cc/', {
         operationName: 'VerifyActivity',
         variables: {
@@ -124,11 +155,27 @@ async function authenticate() {
       }, { headers: verifyActivityHeaders })
     ]);
 
-    console.log('Authentication and verification completed successfully');
+    console.log(`Authentication and verification completed successfully for wallet ${wallet}`);
 
   } catch (error) {
-    console.error('Error:', error.response?.data || error.message);
+    console.error(`Error for wallet ${wallet}:`, error.response?.data || error.message);
   }
 }
 
-authenticate();
+// Function to authenticate all wallets with a delay between each
+async function authenticateAll() {
+  for (let i = 0; i < walletDetails.length; i++) {
+    const { address, privateKey } = walletDetails[i];
+
+    // Authenticate each wallet with a delay between each
+    await authenticate(address, privateKey);
+
+    // Delay for 2 seconds (2000 milliseconds) between each API call
+    await delay(10000); // You can adjust the delay time as needed
+  }
+
+  console.log('All wallets authenticated successfully');
+}
+
+// Start the process
+authenticateAll().catch(console.error);
