@@ -5,6 +5,6 @@ use "npm install" then "node index"
 211
 3
 4  510
-6
+612
 7
 8 9
