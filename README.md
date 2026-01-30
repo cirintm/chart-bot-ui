@@ -5,3 +5,4 @@ use "npm install" then "node index"
 2
 3
 4  5
+6
