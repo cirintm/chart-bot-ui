@@ -1,2 +1,2 @@
 ed# 69-1
-Add your privatekey, w
+Add your privatekey
