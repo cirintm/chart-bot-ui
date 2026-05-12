@@ -5,4 +5,4 @@ use "npm install" then "node index
 211
 3
 4  510
-612
+61
