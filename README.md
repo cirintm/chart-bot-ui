@@ -1,2 +1,2 @@
 ed# 69-1
-Add your privatekey, wallet address and 
+Add your privatekey, wallet address an
