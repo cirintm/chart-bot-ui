@@ -1,2 +1,2 @@
 ed# 69-1
-Add your privatekey, wallet address and referral in "index.js" fi
+Add your privatekey, wallet address and referral in "index.js" f
